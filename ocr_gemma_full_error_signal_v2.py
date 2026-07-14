@@ -82,18 +82,23 @@ def retry_json(json_path: Path):
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Kiểm tra có ký tự � hay không
-    if not any("�" in item.get("result", "") for item in data):
+    # Lọc ra những item nào thực sự chứa ký tự �
+    invalid_indices = [
+        idx for idx, item in enumerate(data) if "�" in item.get("result", "")
+    ]
+
+    if not invalid_indices:
         print("Không có ký tự � -> Bỏ qua.")
         return
 
-    print("Phát hiện ký tự � -> OCR lại toàn bộ file.")
+    print(f"Phát hiện {len(invalid_indices)}/{len(data)} item chứa ký tự � -> Chỉ OCR lại các item này.")
 
     key_index = 0
     success_count = 0
 
-    for idx, item in enumerate(data, start=1):
-        print(f"[{idx}/{len(data)}] {item['url']}")
+    for i, idx in enumerate(invalid_indices, start=1):
+        item = data[idx]
+        print(f"[{i}/{len(invalid_indices)}] {item['url']}")
 
         try:
             result = call_cerebras(
@@ -116,37 +121,79 @@ def retry_json(json_path: Path):
 
         key_index = (key_index + 1) % len(API_KEYS)
 
-    print(f"Hoàn thành: {success_count}/{len(data)} ảnh OCR thành công.")
+    print(f"Hoàn thành: {success_count}/{len(invalid_indices)} item OCR thành công.")
+
+def count_invalid(json_files):
+    """Đếm tổng số item còn chứa ký tự � trên toàn bộ các file."""
+    total = 0
+    for json_file in json_files:
+        with open(json_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        total += sum(1 for item in data if "�" in item.get("result", ""))
+    return total
 
 
-def main():
+def main(max_rounds: int = 20):
     json_files = sorted(Path(".").glob("ocr_gemma-4-31b_*_results.json"))
 
     print(f"Tìm thấy {len(json_files)} file.\n")
 
-    print("===== KIỂM TRA BAN ĐẦU =====")
+    round_num = 0
+    previous_invalid_count = None
 
-    files_need_retry = []
+    while True:
+        round_num += 1
+        print(f"\n========== VÒNG {round_num} ==========")
 
-    for json_file in json_files:
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        files_need_retry = []
+        total_invalid_items = 0
 
-        has_invalid = any("�" in item.get("result", "") for item in data)
+        for json_file in json_files:
+            with open(json_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        if has_invalid:
-            print(f"[CÓ]    {json_file.name}")
-            files_need_retry.append(json_file)
-        else:
-            print(f"[KHÔNG] {json_file.name}")
+            invalid_count = sum(1 for item in data if "�" in item.get("result", ""))
 
-    print(
-        f"\nTổng cộng: {len(files_need_retry)}/{len(json_files)} file cần OCR lại.\n"
-    )
+            if invalid_count > 0:
+                print(f"[CÓ]    {json_file.name}  ({invalid_count} item lỗi)")
+                files_need_retry.append(json_file)
+                total_invalid_items += invalid_count
+            else:
+                print(f"[KHÔNG] {json_file.name}")
 
-    # Chỉ OCR lại những file còn lỗi
-    for json_file in files_need_retry:
-        retry_json(json_file)
+        print(
+            f"\nTổng cộng: {len(files_need_retry)}/{len(json_files)} file cần OCR lại, "
+            f"tương ứng {total_invalid_items} item bị lỗi.\n"
+        )
+
+        if not files_need_retry:
+            print("🎉 Không còn file nào chứa ký tự lỗi. Hoàn tất!")
+            break
+
+        # Chỉ OCR lại những file còn lỗi
+        for json_file in files_need_retry:
+            retry_json(json_file)
+
+        current_invalid_count = count_invalid(json_files)
+        print(f"\nSố ảnh còn lỗi sau vòng {round_num}: {current_invalid_count}")
+
+        if current_invalid_count == 0:
+            print("🎉 Không còn ký tự lỗi nào. Hoàn tất!")
+            break
+
+        if previous_invalid_count is not None and current_invalid_count >= previous_invalid_count:
+            print(
+                "⚠️ Số lỗi không giảm so với vòng trước "
+                f"({previous_invalid_count} -> {current_invalid_count}). "
+                "Có thể do ảnh/link bị lỗi vĩnh viễn. Dừng lại để tránh lặp vô hạn."
+            )
+            break
+
+        previous_invalid_count = current_invalid_count
+
+        if round_num >= max_rounds:
+            print(f"⚠️ Đã đạt giới hạn {max_rounds} vòng. Dừng lại.")
+            break
 
 
 if __name__ == "__main__":
