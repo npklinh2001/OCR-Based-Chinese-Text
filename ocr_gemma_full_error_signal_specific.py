@@ -12,14 +12,16 @@ from cerebras.cloud.sdk import Cerebras
 MODEL = "gemma-4-31b"
 
 API_KEYS = [
-    "csk-cx8xrw24m3998y636rkjr9fxx5vmen8452dfecjee82d8crc" # ngphkhanhlinh2001
-    "csk-6cv3hk46vv4wj8eh2j5j4df949mkt82n65mfkp9pk59532hp", # nguyenphankhanhlinh2001
-    "csk-c8e235mwe8mp5tx4nrn53xhymwx3v2kt4crckfd986eh9r9p", #lekhanhphuong
-    "csk-y233medkv2m29x3dfhdxd6jpnhwcnfxjeh4td3pkymhjecww", #jamejordan
-    "csk-trkjhp6hxc3yrxcmmvcdpde4wm5x5penpf8y5e6r3jkdwnfh",
+    #     "csk-6jrvcmmdp58vmrxfmc4tn3kr5ph3wn66pt2r35dw23xr9pkr", # npkl01112001
+    #     "csk-y233medkv2m29x3dfhdxd6jpnhwcnfxjeh4td3pkymhjecww", #jamejordan
+    # "csk-c8e235mwe8mp5tx4nrn53xhymwx3v2kt4crckfd986eh9r9p", #lekhanhphuong
+    # "csk-6cv3hk46vv4wj8eh2j5j4df949mkt82n65mfkp9pk59532hp", # nguyenphankhanhlinh2001
+    # "csk-trkjhp6hxc3yrxcmmvcdpde4wm5x5penpf8y5e6r3jkdwnfh",
+    "csk-nnnjxj6cpvvrkevrvchnm6rfe9ren99e9rph5h5jrepe3hv9"
+
     
-    "csk-6jrvcmmdp58vmrxfmc4tn3kr5ph3wn66pt2r35dw23xr9pkr", # npkl01112001
-    "csk-cx8xrw24m3998y636rkjr9fxx5vmen8452dfecjee82d8crc" # ngphkhanhlinh2001
+
+
 ]
 
 OCR_PROMPT = (
